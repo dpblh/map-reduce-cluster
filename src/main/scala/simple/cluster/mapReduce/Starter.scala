@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 object Starter {
   def main(args: Array[String]): Unit = {
     if (args.isEmpty) {
-      // если нет аргументов стартуем кластер подефолту
+      // если нет аргументов стартуем кластер по дефолту
       startup(Seq("2551", "2552", "0"))
       // запускаем потребителя кластера
       Client.main(Array.empty)
@@ -34,7 +34,7 @@ object Starter {
       val system = ActorSystem("ClusterSystem", config)
 
       // master mapper reducer запускаются на каждой ноде
-      system.actorOf(Props[MapperWorker], name = "mapperWorker")
+//      system.actorOf(Props[MapperWorker], name = "mapperWorker")
       system.actorOf(Props[ReducerWorker], name = "reducerWorker")
       system.actorOf(Props[Master], name = "master")
     }
@@ -42,7 +42,7 @@ object Starter {
 }
 
 // потребитель услуг от нашего кластера.
-// просто запускает собвытие на обработку и ждет завершения
+// просто запускает событие на обработку и ждет завершения
 object Client {
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("ClusterSystem")
@@ -74,7 +74,7 @@ class Client(servicePath: String) extends Actor {
 
   def receive = {
     case "tick" if nodes.nonEmpty =>
-      // очень грубо считаем что кластер инициализировался и запускаем задачу в кластер
+      // очень грубо считаем, что кластер инициализировался, и запускаем задачу в кластер
       // убиваем шедулер
       tickTask.cancel()
 

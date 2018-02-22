@@ -1,9 +1,8 @@
 package simple.cluster.mapReduce
 
-import akka.actor.ActorRef
+import java.text.SimpleDateFormat
 
-final case class CountDocument(text: String)
-final case class StatsResult(meanWordLength: List[(String, List[String], String, String)])
+import akka.actor.ActorRef
 
 case class ReadFromFile(filePath: String, start: java.util.Date, end: java.util.Date)
 
@@ -11,45 +10,45 @@ case class Mapper(lines: List[String], start: java.util.Date, end: java.util.Dat
 case class MapperResult(values: List[Mapped])
 case class MapperFinal(uuid: String, client: ActorRef)
 object Mapped {
+  val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
   def fromLine(line: String): Mapped = {
-    val ip :: user :: time :: Nil = line.split(";").toList
-    new Mapped(ip, (user, time))
+    val user :: ip :: time :: Nil = line.split(",").map(_.replaceAll("\"", "")).toList
+    new Mapped(ip, (user, formatter.parse(time).getTime))
   }
 }
-class Mapped(val key: String, val value: (String, String)) extends Ordered[Mapped] {
+class Mapped(val key: String, val value: (String, Long)) extends Ordered[Mapped] {
   override def equals(obj: Any): Boolean = obj match {
     case that: Mapped => this.key == that.key
     case _ => false
   }
   override def compare(that: Mapped): Int = this.key compare that.key
-  def toLine: String = s"$key;${value._1};${value._2}"
+  def toLine: String = s"${value._1},$key,${Mapped.formatter.format(value._2)}"
 }
 
 object Merged {
-  def apply(key: String, values: List[(String, String)]): Merged = new Merged(key, values)
+  def apply(key: String, values: List[(String, Long)]): Merged = new Merged(key, values)
   def fromLine(line: String): Merged = {
     val key :: values = line.split("\\|").toList
     Merged(key, values.map {
       value =>
         val user :: time :: Nil = value.split(";").toList
-        (user, time)
+        (user, time.toLong)
     })
   }
 }
-class Merged(val key: String, val values: List[(String, String)]) {
+class Merged(val key: String, val values: List[(String, Long)]) {
   def toLine: String = s"$key|${values.map(value => s"${value._1};${value._2}").mkString("|")}"
 }
 
 case class Reduce(lines: List[String])
 case class ReduceResult(lines: List[Reduced])
 case class ReduceFinal(uuid: String)
-case class Reduced(key: String, users: List[String], start: String, end: String) {
-  def toLine: String = s"$key;${users.mkString("|")};$start;$end"
+object Reduced {
+  val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+}
+case class Reduced(key: String, users: List[(String, Long)], start: Long, end: Long) {
+  def toLine: String = s""""$key","${users.map(t => s"${t._1}:${Reduced.formatter.format(new java.util.Date(t._2))}").mkString(";")}","${Reduced.formatter.format(new java.util.Date(start))}","${Reduced.formatter.format(new java.util.Date(end))}""""
 }
 
-
-case class Result(values: List[(String, List[String])])
-
-
-case object Start
-case object MapDone
+case object Continue
+case object YauAlready

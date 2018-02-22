@@ -1,13 +1,13 @@
 package simple.cluster.mapReduce
 
-import java.text.SimpleDateFormat
-
 import akka.actor.Actor
 
-//#worker
+/**
+  * Редьюсер.
+  * Вторая часть фильтра. Оставляем только записи со множественным входом
+  * и приводим к финальному виду
+  */
 class ReducerWorker extends Actor {
-
-  val formater = new SimpleDateFormat("dd.MM.yyyy")
 
   def receive = {
     case Reduce(lines) =>
@@ -19,14 +19,16 @@ class ReducerWorker extends Actor {
             item =>
               Reduced(
                 item.key,
-                item.values.map(_._1),
+                item.values,
                 item.values.map(_._2).min,
                 item.values.map(_._2).max
               )
           }
       )
+      sender() ! Continue
+    case YauAlready =>
+      // отвесь, если жив
+      sender() ! Continue
   }
 
 }
-
-//#worker

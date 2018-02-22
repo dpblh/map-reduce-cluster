@@ -1,29 +1,32 @@
 package simple.cluster.mapReduce
 
-import java.text.SimpleDateFormat
-
 import akka.actor.{Actor, ActorRef}
 
-//#worker
-class MapperWorker extends Actor {
+/**
+  * Маппер. всегда запускается на той же ноде, что и мастер
+  * после старта регистрирует себя на наблюдателе
+  * реализует часть функционала back pressure
+  * производит начальную фильтрацию по времени
+  */
+class MapperWorker(supervisor: ActorRef) extends Actor {
 
-//  context.parent ! Ready
-
-  val formater = new SimpleDateFormat("dd.MM.yyyy")
+  override def preStart(): Unit = {
+    super.preStart()
+    supervisor ! Continue
+  }
 
   def receive = {
     case Mapper(lines, start, end) =>
-      println("111111111----")
-      sender() ! MapperResult(lines
+      supervisor ! MapperResult(lines
         .map { Mapped.fromLine }
         .filter {
           tp =>
-            val timestamp = formater.parse(tp.value._2)
-            timestamp.getTime >= start.getTime && timestamp.getTime <= end.getTime
+            val timestamp = tp.value._2
+            timestamp >= start.getTime && timestamp <= end.getTime
         }
         .sortBy(_.key)
       )
+      // сигнализирует что готов читать дальше
+      supervisor ! Continue
   }
 }
-
-//#worker
