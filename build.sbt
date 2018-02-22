@@ -19,7 +19,5 @@ lazy val `akka-sample-cluster-scala` = project
       "com.typesafe.akka" %% "akka-remote" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion
     ),
-    mainClass in (Compile, run) := Some("simple.cluster.mapReduce.Starter")//,
-    // disable parallel tests
-//    parallelExecution in Test := false
+    mainClass in (Compile, run) := Some("simple.cluster.mapReduce.Starter")
   )
